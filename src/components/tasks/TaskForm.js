@@ -7,7 +7,10 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 const TaskForm = () => {
+
   const dispatch = useDispatch();
+
+
 
   // State to store form data
   const [formData, setFormData] = useState({
@@ -18,8 +21,11 @@ const TaskForm = () => {
     tags: [],
     newTag: '',
     reminder: false,
+    category: ''
 
   });
+
+
 
   // State to handle errors
   const [errors, setErrors] = useState({});
@@ -63,6 +69,7 @@ const TaskForm = () => {
           tags: [],
           newTag: '',
           reminder: false,
+          category: ''
         });
         setErrors({});
       })
@@ -143,6 +150,17 @@ const TaskForm = () => {
               <option value="high">High Priority</option>
             </select>
           </div>
+        </div>
+
+         {/* Category Input */}
+         <div className="form-group">
+          <input
+            type="text"
+            value={formData.category}
+            onChange={(e) => handleInputChange('category', e.target.value)}
+            placeholder="Task Category (e.g., Work, Personal)"
+            className="form-input"
+          />
         </div>
 
         <div className="form-group">

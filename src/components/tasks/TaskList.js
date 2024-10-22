@@ -13,18 +13,29 @@ import "react-toastify/dist/ReactToastify.css";
 import EditTaskModal from "../ui/EditTaskModal";
 
 const TaskList = () => {
-  const { filteredItems, filters, status, error } = useSelector(
-    (state) => state?.tasks
-  );
+    const { filteredItems, filters, status, error } = useSelector(
+        (state) => state?.tasks
+      );
   const dispatch = useDispatch();
   const [showModal, setShowModal] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState(null);
+  const [activeTab, setActiveTab] = useState("all"); // Track active tab
   const [deleteTimeouts, setDeleteTimeouts] = useState({});
-  const [expandedGroups, setExpandedGroups] = useState({});
+  const [isMounted, setIsMounted] = useState(false);
+
+  // States for filters and search
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all"); // For Completed/Pending
+  const [priorityFilter, setPriorityFilter] = useState("all"); // For Low/Medium/High
 
   useEffect(() => {
     dispatch(fetchTasks());
+    setIsMounted(true);
   }, [dispatch]);
+
+  if (!isMounted) {
+    return null;
+  }
 
   const handleFilterChange = (e) => {
     dispatch(setFilter({ [e.target.name]: e.target.value }));
@@ -53,29 +64,22 @@ const TaskList = () => {
   };
 
   const handleToggleComplete = (taskId) => {
-    try {
-      dispatch(toggleTaskComplete(taskId));
-    } catch (error) {
-      console.log(error.message);
-    }
+    dispatch(toggleTaskComplete(taskId));
   };
 
   const handleDeleteTask = (taskId) => {
-    // Display a notification and set a timer to delete the task after 5 seconds
     const toastId = toast(`Task deleted. Undo?`, {
       autoClose: 5000,
-      onClose: () => confirmDeleteTask(taskId), // If no undo, permanently delete
+      onClose: () => confirmDeleteTask(taskId),
       closeOnClick: false,
       position: "bottom-right",
       toastId: taskId,
     });
 
-    // Store the timeout ID in case we need to cancel it
     const timeoutId = setTimeout(() => {
       dispatch(deleteTask(taskId));
     }, 5000);
 
-    // Save timeout info for future cancellation
     setDeleteTimeouts((prev) => ({
       ...prev,
       [taskId]: { timeoutId, toastId },
@@ -84,22 +88,23 @@ const TaskList = () => {
 
   const confirmDeleteTask = (taskId) => {
     dispatch(deleteTask(taskId));
-    toast.dismiss(taskId); // Close the toast if user doesn't undo
+    toast.dismiss(taskId);
   };
 
   const handleUndoDelete = (taskId) => {
     const timeoutData = deleteTimeouts[taskId];
     if (timeoutData) {
-      clearTimeout(timeoutData.timeoutId); // Cancel deletion
-      toast.dismiss(timeoutData.toastId); // Close the toast
+      clearTimeout(timeoutData.timeoutId);
+      toast.dismiss(timeoutData.toastId);
       setDeleteTimeouts((prev) => {
         const { [taskId]: _, ...rest } = prev;
-        return rest; // Remove from timeout state
+        return rest;
       });
     }
   };
-  // Handle reminder toggle for each task
-  const handleToggleReminder = (task) => {
+
+   // Handle reminder toggle for each task
+   const handleToggleReminder = (task) => {
     const updatedTask = { ...task, reminder: !task.reminder }; // Toggle reminder
     dispatch(updateTask({ id: task._id, updates: updatedTask }))
       .unwrap()
@@ -122,6 +127,31 @@ const TaskList = () => {
       reminder && timeDifference > 0 && timeDifference <= 24 * 60 * 60 * 1000
     ); // Within 24 hours
   };
+
+  // Filter tasks based on status, priority, and search term
+  const filteredTasks = filteredItems.filter((task) => {
+    const matchesStatus = statusFilter === "all" ||
+      (statusFilter === "completed" && task.completed) ||
+      (statusFilter === "pending" && !task.completed);
+
+    const matchesPriority = priorityFilter === "all" || task.priority === priorityFilter;
+
+    const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      task.description.toLowerCase().includes(searchTerm.toLowerCase());
+
+    return matchesStatus && matchesPriority && matchesSearch;
+  });
+
+  const groupedTasks = groupTasksByCategory(filteredTasks);
+  const tabs = ["all", ...Object.keys(groupedTasks)];
+
+  const getTasksForActiveTab = () => {
+    if (activeTab === "all") {
+      return filteredTasks; // Return all tasks
+    }
+    return groupedTasks[activeTab] || []; // Return tasks for the selected category
+  };
+
 
   const getPriorityClass = (priority) => {
     switch (priority) {
@@ -179,18 +209,28 @@ const TaskList = () => {
         />
       </div>
 
+      {/* Tabs for Categories */}
+      <div className="task-tabs">
+        {tabs.map((tab) => (
+          <button
+            key={tab}
+            className={`tab-button ${activeTab === tab ? "active" : ""}`}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tab === "all" ? "All Tasks" : tab}
+          </button>
+        ))}
+      </div>
+
       {/* Task List */}
-      <ul className="task-list">
-        {filteredItems.length > 0 ? (
-          filteredItems.map((task) => (
-            <li
-              key={task._id}
-              className={`task-item ${
+      <div className="task-categories">
+        <ul className="task-list grid">
+          {getTasksForActiveTab().map((task) => (
+            <li key={task._id} className={`task-item ${
                 task.completed ? "completed" : ""
               } ${getPriorityClass(task.priority)} ${
                 isTaskDueSoon(task.dueDate, task.reminder) ? "due-soon" : ""
-              }`}
-            >
+              }`}>
               <div>
                 <h3>{task.title}</h3>
                 <p>{task.description}</p>
@@ -204,14 +244,9 @@ const TaskList = () => {
                 <button onClick={() => handleToggleComplete(task._id)}>
                   {task?.completed ? "Mark as Incomplete" : "Mark as Complete"}
                 </button>
-                <button onClick={() => handleDeleteTask(task._id)}>
-                  Delete
-                </button>
-                {/* Undo button */}
+                <button onClick={() => handleDeleteTask(task._id)}>Delete</button>
                 {deleteTimeouts[task._id] && (
-                  <button onClick={() => handleUndoDelete(task._id)}>
-                    Undo
-                  </button>
+                  <button onClick={() => handleUndoDelete(task._id)}>Undo</button>
                 )}
                 {/* Reminder Toggle */}
                 <button onClick={() => handleToggleReminder(task)}>
@@ -219,11 +254,10 @@ const TaskList = () => {
                 </button>
               </div>
             </li>
-          ))
-        ) : (
-          <p>No tasks found.</p>
-        )}
-      </ul>
+          ))}
+        </ul>
+      </div>
+
       {showModal && (
         <EditTaskModal
           task={taskToEdit}
@@ -234,6 +268,18 @@ const TaskList = () => {
       <ToastContainer />
     </div>
   );
+};
+
+// Group tasks by category function
+const groupTasksByCategory = (tasks) => {
+  return tasks.reduce((groups, task) => {
+    const category = task.category || "Uncategorized"; // Fallback category
+    if (!groups[category]) {
+      groups[category] = [];
+    }
+    groups[category].push(task);
+    return groups;
+  }, {});
 };
 
 export default TaskList;
