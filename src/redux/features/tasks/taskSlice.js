@@ -122,7 +122,7 @@ const taskSlice = createSlice({
       .addCase(fetchTasks.fulfilled, (state, action) => {
         state.status = 'succeeded';
         state.items = action.payload;
-        state.filteredItems = action.payload; // Set filteredItems to all tasks by default
+        state.filteredItems = action.payload;
       })
       .addCase(fetchTasks.rejected, (state, action) => {
         state.status = 'failed';
@@ -130,14 +130,14 @@ const taskSlice = createSlice({
       })
       .addCase(addTask.fulfilled, (state, action) => {
         state.items.push(action.payload);
-        state.filteredItems.push(action.payload); // Add task to filtered list
+        state.filteredItems.push(action.payload);
       })
       .addCase(toggleTaskComplete.fulfilled, (state, action) => {
         const updatedTask = action.payload;
         const taskIndex = state.items.findIndex((task) => task._id === updatedTask._id);
         if (taskIndex !== -1) {
           state.items[taskIndex] = updatedTask;
-          state.filteredItems[taskIndex] = updatedTask; // Update both lists
+          state.filteredItems[taskIndex] = updatedTask;
         }
       })
       .addCase(updateTask.fulfilled, (state, action) => {
