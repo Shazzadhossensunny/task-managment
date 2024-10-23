@@ -6,9 +6,9 @@ export async function GET() {
     const { db } = await connectToDatabase();
     const tasks = await db.collection('tasks').find({}).toArray();
 
-    return NextResponse.json(tasks);  // Return all tasks
+    return NextResponse.json(tasks);
   } catch (error) {
-    console.error('Error fetching tasks:', error);  // Log the error for debugging
+    console.error('Error fetching tasks:', error);
     return NextResponse.json({ message: 'Error fetching tasks' }, { status: 500 });
   }
 }
@@ -16,14 +16,14 @@ export async function GET() {
 export async function POST(req) {
   try {
     const { db } = await connectToDatabase();
-    const taskData = await req.json();  // Parse the incoming request body
+    const taskData = await req.json();
 
     // Ensure 'reminder' field is included (default to false if not provided)
     const taskWithReminder = {
       ...taskData,
-      reminder: taskData.reminder ?? false,  // Set default value for reminder
-      completed: taskData.completed ?? false,  // Set default value for completed status
-      createdAt: new Date(),  // Add a timestamp for task creation
+      reminder: taskData.reminder ?? false,
+      completed: taskData.completed ?? false,
+      createdAt: new Date(),
     };
 
     const result = await db.collection('tasks').insertOne(taskWithReminder);
@@ -34,7 +34,7 @@ export async function POST(req) {
       taskId: result.insertedId,
     });
   } catch (error) {
-    console.error('Error creating task:', error);  // Log the error for debugging
+    console.error('Error creating task:', error);
     return NextResponse.json({ message: 'Error creating task' }, { status: 500 });
   }
 }

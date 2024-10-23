@@ -1,6 +1,5 @@
 'use client'
 
-// components/TaskTabs.js
 import { useState } from 'react';
 import TaskItem from './TaskItem';
 
@@ -11,7 +10,7 @@ const TaskTabs = ({ tasks }) => {
   // Function to group tasks by category
   const groupTasksByCategory = (tasks) => {
     return tasks.reduce((acc, task) => {
-      const category = task.category || 'Uncategorized';  // Handle tasks with no category
+      const category = task.category || 'Uncategorized';
       if (!acc[category]) {
         acc[category] = [];
       }

@@ -54,7 +54,7 @@ const TaskForm = () => {
 
     const task = {
       ...formData,
-      tags: formData.tags.filter(tag => tag.trim() !== ''), // Filter out empty tags
+      tags: formData.tags.filter(tag => tag.trim() !== ''),
     };
 
     // Dispatch task to backend
@@ -106,7 +106,7 @@ const TaskForm = () => {
   };
 
   return (
-    <>
+    <div>
       <form onSubmit={handleSubmit} className="task-form">
         <div className="form-group">
           <input
@@ -218,9 +218,16 @@ const TaskForm = () => {
           Add Task
         </button>
       </form>
-
-      <ToastContainer/>
-    </>
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        closeOnClick
+        pauseOnHover
+        draggable
+        theme="light"
+      />
+    </div>
   );
 };
 

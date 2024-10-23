@@ -11,6 +11,8 @@ import {
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import EditTaskModal from "../ui/EditTaskModal";
+import Swal from 'sweetalert2'
+
 
 const TaskList = () => {
     const { filteredItems, filters, status, error } = useSelector(
@@ -19,14 +21,14 @@ const TaskList = () => {
   const dispatch = useDispatch();
   const [showModal, setShowModal] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState(null);
-  const [activeTab, setActiveTab] = useState("all"); // Track active tab
+  const [activeTab, setActiveTab] = useState("all");
   const [deleteTimeouts, setDeleteTimeouts] = useState({});
   const [isMounted, setIsMounted] = useState(false);
 
   // States for filters and search
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all"); // For Completed/Pending
-  const [priorityFilter, setPriorityFilter] = useState("all"); // For Low/Medium/High
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState("all");
 
   useEffect(() => {
     dispatch(fetchTasks());
@@ -68,44 +70,46 @@ const TaskList = () => {
   };
 
   const handleDeleteTask = (taskId) => {
-    const toastId = toast(`Task deleted. Undo?`, {
-      autoClose: 5000,
-      onClose: () => confirmDeleteTask(taskId),
-      closeOnClick: false,
-      position: "bottom-right",
-      toastId: taskId,
+    const swalWithBootstrapButtons = Swal.mixin({
+      customClass: {
+        confirmButton: "custom-confirm-button",
+        cancelButton: "custom-cancel-button"
+      },
+      buttonsStyling: false
     });
 
-    const timeoutId = setTimeout(() => {
-      dispatch(deleteTask(taskId));
-    }, 5000);
+    swalWithBootstrapButtons.fire({
+      title: "Are you sure?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Undo",
+      reverseButtons: true
+    }).then((result) => {
+      if (result?.isConfirmed) {
+        // If confirmed, delete the task
+        dispatch(deleteTask(taskId));
 
-    setDeleteTimeouts((prev) => ({
-      ...prev,
-      [taskId]: { timeoutId, toastId },
-    }));
+        swalWithBootstrapButtons.fire({
+          title: "Deleted!",
+          text: "Your task has been deleted.",
+          icon: "success"
+        });
+      } else if (result.dismiss === Swal.DismissReason.cancel) {
+        swalWithBootstrapButtons.fire({
+          title: "Undo",
+          text: "Your task is safe :)",
+          icon: "error"
+        });
+      }
+    });
   };
 
-  const confirmDeleteTask = (taskId) => {
-    dispatch(deleteTask(taskId));
-    toast.dismiss(taskId);
-  };
-
-  const handleUndoDelete = (taskId) => {
-    const timeoutData = deleteTimeouts[taskId];
-    if (timeoutData) {
-      clearTimeout(timeoutData.timeoutId);
-      toast.dismiss(timeoutData.toastId);
-      setDeleteTimeouts((prev) => {
-        const { [taskId]: _, ...rest } = prev;
-        return rest;
-      });
-    }
-  };
 
    // Handle reminder toggle for each task
    const handleToggleReminder = (task) => {
-    const updatedTask = { ...task, reminder: !task.reminder }; // Toggle reminder
+    const updatedTask = { ...task, reminder: !task.reminder };
     dispatch(updateTask({ id: task._id, updates: updatedTask }))
       .unwrap()
       .then(() => {
@@ -122,10 +126,11 @@ const TaskList = () => {
   const isTaskDueSoon = (dueDate, reminder) => {
     const now = new Date();
     const due = new Date(dueDate);
+    due.setHours(23, 59, 59, 999);
     const timeDifference = due - now;
     return (
       reminder && timeDifference > 0 && timeDifference <= 24 * 60 * 60 * 1000
-    ); // Within 24 hours
+    );
   };
 
   // Filter tasks based on status, priority, and search term
@@ -136,8 +141,8 @@ const TaskList = () => {
 
     const matchesPriority = priorityFilter === "all" || task.priority === priorityFilter;
 
-    const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = task?.title?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+      task.description?.toLowerCase().includes(searchTerm?.toLowerCase());
 
     return matchesStatus && matchesPriority && matchesSearch;
   });
@@ -147,20 +152,20 @@ const TaskList = () => {
 
   const getTasksForActiveTab = () => {
     if (activeTab === "all") {
-      return filteredTasks; // Return all tasks
+      return filteredTasks;
     }
-    return groupedTasks[activeTab] || []; // Return tasks for the selected category
+    return groupedTasks[activeTab] || [];
   };
 
 
   const getPriorityClass = (priority) => {
     switch (priority) {
       case "low":
-        return "task-low"; // Green
+        return "task-low";
       case "medium":
-        return "task-medium"; // Yellow
+        return "task-medium";
       case "high":
-        return "task-high"; // Red
+        return "task-high";
       default:
         return "";
     }
@@ -228,8 +233,8 @@ const TaskList = () => {
           {getTasksForActiveTab().map((task) => (
             <li key={task._id} className={`task-item ${
                 task.completed ? "completed" : ""
-              } ${getPriorityClass(task.priority)} ${
-                isTaskDueSoon(task.dueDate, task.reminder) ? "due-soon" : ""
+              } ${getPriorityClass(task?.priority)} ${
+                isTaskDueSoon(task?.dueDate, task?.reminder) ? "due-soon" : ""
               }`}>
               <div>
                 <h3>{task.title}</h3>
@@ -240,16 +245,16 @@ const TaskList = () => {
               </div>
 
               <div className="task-actions">
-                <button onClick={() => handleEditTask(task)}>Edit</button>
-                <button onClick={() => handleToggleComplete(task._id)}>
+                <button className="edit-btn" onClick={() => handleEditTask(task)}>Edit</button>
+                <button className="mark-btn" onClick={() => handleToggleComplete(task._id)}>
                   {task?.completed ? "Mark as Incomplete" : "Mark as Complete"}
                 </button>
-                <button onClick={() => handleDeleteTask(task._id)}>Delete</button>
+                <button className="delete-btn" onClick={() => handleDeleteTask(task._id)}>Delete</button>
                 {deleteTimeouts[task._id] && (
-                  <button onClick={() => handleUndoDelete(task._id)}>Undo</button>
+                  <button className="undo-btn" onClick={() => handleUndoDelete(task._id)}>Undo</button>
                 )}
                 {/* Reminder Toggle */}
-                <button onClick={() => handleToggleReminder(task)}>
+                <button className="reminder-btn" onClick={() => handleToggleReminder(task)}>
                   {task.reminder ? "Turn off Reminder" : "Turn on Reminder"}
                 </button>
               </div>
@@ -273,7 +278,7 @@ const TaskList = () => {
 // Group tasks by category function
 const groupTasksByCategory = (tasks) => {
   return tasks.reduce((groups, task) => {
-    const category = task.category || "Uncategorized"; // Fallback category
+    const category = task.category || "Uncategorized";
     if (!groups[category]) {
       groups[category] = [];
     }

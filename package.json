@@ -16,7 +16,8 @@
     "react": "19.0.0-rc-65a56d0e-20241020",
     "react-dom": "19.0.0-rc-65a56d0e-20241020",
     "react-redux": "^9.1.2",
-    "react-toastify": "^10.0.6"
+    "react-toastify": "^10.0.6",
+    "sweetalert2": "^11.14.4"
   },
   "devDependencies": {
     "eslint": "^8",

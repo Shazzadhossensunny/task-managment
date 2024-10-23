@@ -11,21 +11,33 @@ export const fetchTasks = createAsyncThunk('tasks/fetchTasks', async () => {
 
 // Add a new task to the backend
 export const addTask = createAsyncThunk('tasks/addTask', async (task, { dispatch }) => {
-  const newTask = { ...task, completed: false }; // Set default status to false
+  const newTask = { ...task, completed: false };
 
-  const response = await fetch('/api/tasks', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(newTask),
-  });
-  if (!response.ok) {
-    throw new Error('Failed to add task');
+  try {
+    const response = await fetch('/api/tasks', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(newTask),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to add task');
+    }
+
+    const data = await response.json();
+
+    // Optionally refetch tasks after adding one
+    dispatch(fetchTasks());
+
+    return data;
+  } catch (error) {
+    console.error('Error adding task:', error);
+    throw error;
   }
-  dispatch(fetchTasks()); // Refetch tasks after adding
-  return response.json();
 });
+
 
 // Update task completion status in the backend
 export const toggleTaskComplete = createAsyncThunk(
@@ -48,7 +60,7 @@ export const toggleTaskComplete = createAsyncThunk(
 
 // Update a task in the backend
 export const updateTask = createAsyncThunk('tasks/updateTask', async ({ id, updates }) => {
-  const { _id, ...filteredUpdates } = updates; // Exclude _id
+  const { _id, ...filteredUpdates } = updates;
   const response = await fetch(`/api/tasks/${id}`, {
     method: 'PUT',
     headers: {
@@ -68,7 +80,7 @@ export const deleteTask = createAsyncThunk('tasks/deleteTask', async (taskId, { 
   if (!response.ok) {
     throw new Error('Failed to delete task');
   }
-  dispatch(fetchTasks()); // Refetch tasks after deletion
+  dispatch(fetchTasks());
   return taskId;
 });
 
@@ -133,13 +145,13 @@ const taskSlice = createSlice({
         const taskIndex = state.items.findIndex((task) => task._id === updatedTask._id);
         if (taskIndex !== -1) {
           state.items[taskIndex] = updatedTask;
-          state.filteredItems[taskIndex] = updatedTask; // Update both lists
+          state.filteredItems[taskIndex] = updatedTask;
         }
       })
       .addCase(deleteTask.fulfilled, (state, action) => {
         const taskId = action.payload;
         state.items = state.items.filter((task) => task._id !== taskId);
-        state.filteredItems = state.filteredItems.filter((task) => task._id !== taskId); // Remove from both lists
+        state.filteredItems = state.filteredItems.filter((task) => task._id !== taskId);
       });
   },
 });
